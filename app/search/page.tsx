@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Search, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -12,7 +12,7 @@ import { searchNews } from "@/lib/news-service"
 import type { Article } from "@/types/article"
 import { motion } from "framer-motion"
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams()
   const initialQuery = searchParams.get("q") || ""
 
@@ -134,5 +134,22 @@ export default function SearchPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container px-4 py-8 mx-auto">
+          <h1 className="mb-6 text-3xl font-bold">Search News</h1>
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-secondary" />
+          </div>
+        </div>
+      }
+    >
+      <SearchContent />
+    </Suspense>
   )
 }

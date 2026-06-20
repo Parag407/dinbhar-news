@@ -8,12 +8,12 @@ export default function Home() {
   return (
     <div className="container px-4 py-8 mx-auto">
       <Hero />
-      <div className="mt-8">
-        <NewsFilters />
-        <Suspense fallback={<NewsListSkeleton />}>
+      <Suspense fallback={<NewsListSkeleton />}>
+        <div className="mt-8">
+          <NewsFilters />
           <NewsList />
-        </Suspense>
-      </div>
+        </div>
+      </Suspense>
     </div>
   )
 }

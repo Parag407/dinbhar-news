@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 function transformArticle(apiArticle: any, index: number) {
   return {
     id: apiArticle.url
-      ? btoa(apiArticle.url)
+      ? Buffer.from(apiArticle.url).toString("base64")
           .replace(/[^a-zA-Z0-9]/g, "")
           .substring(0, 10) + index
       : `article-${index}`,
