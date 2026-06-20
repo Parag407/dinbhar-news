@@ -1,5 +1,54 @@
 import type { Article } from "@/types/article"
 
+// Memory cache for client side
+const memoryCache = new Map<string, Article>();
+
+// Helper to save articles to memory and session storage
+function cacheArticles(articles: Article[]) {
+  if (typeof window === "undefined") return;
+  try {
+    const stored = sessionStorage.getItem("dinbhar_articles_cache");
+    const cacheObj = stored ? JSON.parse(stored) : {};
+    
+    articles.forEach(article => {
+      if (article.id) {
+        memoryCache.set(article.id, article);
+        cacheObj[article.id] = article;
+      }
+    });
+    
+    sessionStorage.setItem("dinbhar_articles_cache", JSON.stringify(cacheObj));
+  } catch (e) {
+    console.error("Error caching articles:", e);
+  }
+}
+
+// Helper to retrieve from cache
+function getArticleFromCache(id: string): Article | null {
+  // Check memory
+  if (memoryCache.has(id)) {
+    return memoryCache.get(id) || null;
+  }
+  
+  // Check sessionStorage
+  if (typeof window !== "undefined") {
+    try {
+      const stored = sessionStorage.getItem("dinbhar_articles_cache");
+      if (stored) {
+        const cacheObj = JSON.parse(stored);
+        if (cacheObj[id]) {
+          // Put in memory cache too
+          memoryCache.set(id, cacheObj[id]);
+          return cacheObj[id];
+        }
+      }
+    } catch (e) {
+      console.error("Error loading article from cache:", e);
+    }
+  }
+  return null;
+}
+
 // Client-side service that calls our API routes
 export async function getNews(country = "us", category = "general", page = 1): Promise<Article[]> {
   try {
@@ -11,7 +60,9 @@ export async function getNews(country = "us", category = "general", page = 1): P
     }
 
     const data = await response.json()
-    return data.articles || []
+    const articles = data.articles || []
+    cacheArticles(articles)
+    return articles
   } catch (error) {
     console.error("Failed to fetch news:", error)
     return getFallbackArticles()
@@ -30,8 +81,25 @@ export async function getFeaturedArticle(): Promise<Article | null> {
 
 export async function getArticleById(id: string): Promise<Article | null> {
   try {
-    // Since NewsAPI doesn't provide individual article endpoints,
-    // we'll search through recent articles
+    // 1. Try cache
+    const cached = getArticleFromCache(id);
+    if (cached) return cached;
+
+    // 2. Try bookmarks from local storage
+    if (typeof window !== "undefined") {
+      try {
+        const bookmarksStored = localStorage.getItem("dinbhar-bookmarks");
+        if (bookmarksStored) {
+          const bookmarks = JSON.parse(bookmarksStored) as Article[];
+          const bookmarked = bookmarks.find((article) => article.id === id);
+          if (bookmarked) return bookmarked;
+        }
+      } catch (e) {
+        console.error("Error reading bookmarks from localStorage:", e);
+      }
+    }
+
+    // 3. Fallback: Search through general news
     const articles = await getNews("us", "general", 1)
     return articles.find((article) => article.id === id) || null
   } catch (error) {
@@ -56,7 +124,9 @@ export async function searchNews(query: string): Promise<Article[]> {
       console.warn(data.message)
     }
 
-    return data.articles || []
+    const articles = data.articles || []
+    cacheArticles(articles)
+    return articles
   } catch (error) {
     console.error("Failed to search news:", error)
     return []

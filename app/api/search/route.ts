@@ -74,7 +74,6 @@ function transformArticle(apiArticle: any, index: number) {
     id: apiArticle.url
       ? Buffer.from(apiArticle.url).toString("base64")
           .replace(/[^a-zA-Z0-9]/g, "")
-          .substring(0, 10) + index
       : `article-${index}`,
     title: apiArticle.title || "No title available",
     description: apiArticle.description || "No description available",
